@@ -31,6 +31,11 @@ require __DIR__.'/vendor/autoload.php';
             } catch (\Throwable $e) {
                 fwrite(STDERR, "{$e->getMessage()}");
                 fwrite(STDERR, $e->getTraceAsString());
+
+                if ($e instanceof \GuzzleHttp\Exception\RequestException) {
+                    echo "{$e->getMessage()} ... Retry\n";
+                    continue;
+                }
                 exit(-1);
             }
         }
