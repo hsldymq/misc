@@ -23,18 +23,24 @@ require __DIR__.'/vendor/autoload.php';
     {
         $dt = $this->fromDateTime;
         while ($dt->getTimestamp() <= $this->toDateTime->getTimestamp()) {
-            $roundStr = $this->fetchRound($dt);
-            $roundData = $this->parseRound($roundStr);
-            echo json_encode($roundData).PHP_EOL;
-            $dt = $dt->add(new DateInterval('PT1M'));
+            try {
+                $roundStr = $this->fetchRound($dt);
+                $roundData = $this->parseRound($roundStr);
+                echo json_encode($roundData).PHP_EOL;
+                $dt = $dt->add(new DateInterval('PT1M'));
+            } catch (\Throwable $e) {
+                fwrite(STDERR, "{$e->getMessage()}");
+                fwrite(STDERR, $e->getTraceAsString());
+                exit(-1);
+            }
         }
     }
 
-    private function parseRound(string $round): array
+    private function parseRound(string $roundRawStr): array
     {
-        $round = trim($round);
+        $roundRawStr = trim($roundRawStr);
         $fp = fopen("php://memory", 'rw');
-        fwrite($fp, $round);
+        fwrite($fp, $roundRawStr);
         rewind($fp);
 
         fgets($fp);
@@ -43,6 +49,8 @@ require __DIR__.'/vendor/autoload.php';
         // 时间
         $line = fgets($fp);
         $time = $line;
+
+        fwrite(STDERR, $time);
 
         // 农历
         $line = fgets($fp);
@@ -57,44 +65,12 @@ require __DIR__.'/vendor/autoload.php';
         // 节气首日
         $line = fgets($fp);
 
-        // 节气
+        // 节气 元 干支时 旬首
         $line = fgets($fp);
-        $solarTermStr = mb_substr($line, 0, 2, 'UTF-8');
-        $solarTerm = [
-                "春分" => 0,
-                "清明" => 1,
-                "谷雨" => 2,
-                "立夏" => 3,
-                "小满" => 4,
-                "芒种" => 5,
-                "夏至" => 6,
-                "小暑" => 7,
-                "大暑" => 8,
-                "立秋" => 9,
-                "处暑" => 10,
-                "白露" => 11,
-                "秋分" => 12,
-                "寒露" => 13,
-                "霜降" => 14,
-                "立冬" => 15,
-                "小雪" => 16,
-                "大雪" => 17,
-                "冬至" => 18,
-                "小寒" => 19,
-                "大寒" => 20,
-                "立春" => 21,
-                "雨水" => 22,
-                "惊蛰" => 23,
-            ][$solarTermStr] ?? null;
-        if ($solarTerm === null) {
-            throw new Exception("节气解析失败: {$solarTermStr}");
-        }
-
-        $yuan = mb_substr($line, 3, 2, 'UTF-8');
-        if (!in_array($yuan, ['上元', '中元', '下元'])) {
-            throw new Exception("元解析失败: {$yuan}");
-        }
-        $yuan = ['上元' => 0, '中元' => 1, '下元' => 2];
+        $solarTerm = $this->parseSolarTerm($line);
+        $yuan = $this->parseYuan($line);
+        $sexagenaryHour = $this->parseSexagenaryHour($line);
+        $leadingHour = $this->parseLeadingHour($line);
 
         // 信息
         $line = fgets($fp);
@@ -158,6 +134,9 @@ require __DIR__.'/vendor/autoload.php';
             'solarTerm' => $solarTerm,
             'yuan' => $yuan,
             'round' => $round,
+            'sexagenaryHour' => $sexagenaryHour,
+            'leadingHour' => $leadingHour,
+            'roundRawStr' => $roundRawStr,
             'roundPalaces' => $palaces,
         ];
     }
@@ -334,6 +313,148 @@ require __DIR__.'/vendor/autoload.php';
         }
 
         return ["text" => $this->trim($starStr), "value" => $cs];
+    }
+
+    private function parseSexagenaryHour(string $line): array
+    {
+        $sMap = [
+            "甲子" => 0,
+            "乙丑" => 1,
+            "丙寅" => 2,
+            "丁卯" => 3,
+            "戊辰" => 4,
+            "己巳" => 5,
+            "庚午" => 6,
+            "辛未" => 7,
+            "壬申" => 8,
+            "癸酉" => 9,
+            "甲戌" => 10,
+            "乙亥" => 11,
+            "丙子" => 12,
+            "丁丑" => 13,
+            "戊寅" => 14,
+            "己卯" => 15,
+            "庚辰" => 16,
+            "辛巳" => 17,
+            "壬午" => 18,
+            "癸未" => 19,
+            "甲申" => 20,
+            "乙酉" => 21,
+            "丙戌" => 22,
+            "丁亥" => 23,
+            "戊子" => 24,
+            "己丑" => 25,
+            "庚寅" => 26,
+            "辛卯" => 27,
+            "壬辰" => 28,
+            "癸巳" => 29,
+            "甲午" => 30,
+            "乙未" => 31,
+            "丙申" => 32,
+            "丁酉" => 33,
+            "戊戌" => 34,
+            "己亥" => 35,
+            "庚子" => 36,
+            "辛丑" => 37,
+            "壬寅" => 38,
+            "癸卯" => 39,
+            "甲辰" => 40,
+            "乙巳" => 41,
+            "丙午" => 42,
+            "丁未" => 43,
+            "戊申" => 44,
+            "己酉" => 45,
+            "庚戌" => 46,
+            "辛亥" => 47,
+            "壬子" => 48,
+            "癸丑" => 49,
+            "甲寅" => 50,
+            "乙卯" => 51,
+            "丙辰" => 52,
+            "丁巳" => 53,
+            "戊午" => 54,
+            "己未" => 55,
+            "庚申" => 56,
+            "辛酉" => 57,
+            "壬戌" => 58,
+            "癸亥" => 59,
+        ];
+        $sHour = mb_substr($line, 10, 2, 'UTF-8');
+
+        $cs = $sMap[$this->trim($sHour)] ?? null;
+        if ($cs === null) {
+            throw new Exception("干支解析错误: {$sHour}");
+        }
+
+        return ["text" => $this->trim($sHour), "value" => $cs];
+    }
+
+    private function parseLeadingHour(string $line)
+    {
+        $hMap = [
+            '戊' => 4,
+            '己' => 5,
+            '庚' => 6,
+            '辛' => 7,
+            '壬' => 8,
+            '癸' => 9,
+        ];
+        $lHour = mb_substr($line, 16, 1, 'UTF-8');
+
+        $cs = $hMap[$this->trim($lHour)] ?? null;
+        if ($cs === null) {
+            throw new Exception("旬首解析错误: {$lHour}");
+        }
+
+        return ["text" => $this->trim($lHour), "value" => $cs];
+    }
+
+    private function parseYuan(string $line): array
+    {
+        $map = ['上元' => 0, '中元' => 1, '下元' => 2];
+
+        $yuan = mb_substr($line, 3, 2, 'UTF-8');
+        if (!in_array($yuan, ['上元', '中元', '下元'])) {
+            throw new Exception("元解析失败: {$yuan}");
+        }
+
+        return ["text" => $yuan, "value" => $map[$yuan]];
+    }
+
+    private function parseSolarTerm(string $line): array
+    {
+        $solarTermStr = mb_substr($line, 0, 2, 'UTF-8');
+        $solarTerm = [
+                "春分" => 0,
+                "清明" => 1,
+                "谷雨" => 2,
+                "立夏" => 3,
+                "小满" => 4,
+                "芒种" => 5,
+                "夏至" => 6,
+                "小暑" => 7,
+                "大暑" => 8,
+                "立秋" => 9,
+                "处暑" => 10,
+                "白露" => 11,
+                "秋分" => 12,
+                "寒露" => 13,
+                "霜降" => 14,
+                "立冬" => 15,
+                "小雪" => 16,
+                "大雪" => 17,
+                "冬至" => 18,
+                "小寒" => 19,
+                "大寒" => 20,
+                "立春" => 21,
+                "雨水" => 22,
+                "惊蛰" => 23,
+            ][$solarTermStr] ?? null;
+        if ($solarTerm === null) {
+            throw new Exception("节气解析失败: {$solarTermStr}");
+        }
+
+        return ["text" => $solarTermStr, "value" => $solarTerm];
     }
 
     private function trim(string $s): string
