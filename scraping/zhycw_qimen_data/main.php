@@ -27,7 +27,7 @@ require __DIR__.'/vendor/autoload.php';
                 $roundStr = $this->fetchRound($dt);
                 $roundData = $this->parseRound($roundStr);
                 echo json_encode($roundData).PHP_EOL;
-                $dt = $dt->add(new DateInterval('PT1M'));
+                $dt = $dt->add(new DateInterval('PT1H'));
             } catch (\Throwable $e) {
                 fwrite(STDERR, "{$e->getMessage()}");
                 fwrite(STDERR, $e->getTraceAsString());
@@ -79,30 +79,10 @@ require __DIR__.'/vendor/autoload.php';
 
         // 信息
         $line = fgets($fp);
-        $escaping = mb_substr($line, 0, 2, 'UTF-8');
-        if ($escaping === '阳遁') {
-            $escaping = 0;
-        } else if ($escaping === '阴遁') {
-            $escaping = 1;
-        } else {
-            throw new Exception("阴阳遁解析失败: {$escaping}");
-        }
-
-        $roundStr = mb_substr($line, 2, 1, 'UTF-8');
-        $round = [
-            '一' => 0,
-            '二' => 1,
-            '三' => 2,
-            '四' => 3,
-            '五' => 4,
-            '六' => 5,
-            '七' => 6,
-            '八' => 7,
-            '九' => 8,
-        ][$roundStr] ?? null;
-        if ($round === null) {
-            throw new Exception("局数解析失败: {$roundStr}");
-        }
+        $escaping = $this->parseEscaping($line);
+        $round = $this->parseRoundPalaceIndex($line);
+        $dutyStar = $this->parseDutyStar($line);
+        $dutyDoor = $this->parseDutyDoor($line);
 
         // 分隔符
         $line = fgets($fp);
@@ -140,6 +120,8 @@ require __DIR__.'/vendor/autoload.php';
             'yuan' => $yuan,
             'round' => $round,
             'sexagenaryHour' => $sexagenaryHour,
+            'dutyDoor' => $dutyDoor,
+            'dutyStar' => $dutyStar,
             'leadingHour' => $leadingHour,
             'roundRawStr' => $roundRawStr,
             'roundPalaces' => $palaces,
@@ -214,7 +196,7 @@ require __DIR__.'/vendor/autoload.php';
         $palaces[0]['star'] = $this->parseStarIndex(mb_substr($this->trim($starTerrestrialQiYi[1]), 0, 2, 'UTF-8'));
         $palaces[0]['terrestrialQiYi'] = $this->parseQiYi(mb_substr($this->trim($starTerrestrialQiYi[1]), 3, 1, 'UTF-8'));
         if ($isMiddle) {
-            $palaces[1]['star'] = -1;
+            $palaces[1]['star'] = ['text' => '', 'value' => -1];
             $palaces[1]['terrestrialQiYi'] = $this->parseQiYi($this->trim($starTerrestrialQiYi[2]));
         } else {
             $palaces[1]['star'] = $this->parseStarIndex(mb_substr($this->trim($starTerrestrialQiYi[2]), 0, 2, 'UTF-8'));
@@ -460,6 +442,82 @@ require __DIR__.'/vendor/autoload.php';
         }
 
         return ["text" => $solarTermStr, "value" => $solarTerm];
+    }
+
+    private function parseRoundPalaceIndex(string $line): array
+    {
+        $roundStr = mb_substr($line, 2, 1, 'UTF-8');
+        $round = [
+                '一' => 0,
+                '二' => 1,
+                '三' => 2,
+                '四' => 3,
+                '五' => 4,
+                '六' => 5,
+                '七' => 6,
+                '八' => 7,
+                '九' => 8,
+            ][$roundStr] ?? null;
+        if ($round === null) {
+            throw new Exception("局数宫索引解析失败: {$roundStr}");
+        }
+
+        return ["text" => $roundStr, "value" => $round];
+    }
+
+    private function parseEscaping(string $line): array
+    {
+        $escapingStr = mb_substr($line, 0, 2, 'UTF-8');
+        if ($escapingStr === '阳遁') {
+            $escaping = 0;
+        } else if ($escapingStr === '阴遁') {
+            $escaping = 1;
+        } else {
+            throw new Exception("阴阳遁解析失败: {$escapingStr}");
+        }
+
+        return ["text" => $escapingStr, "value" => $escaping];
+    }
+
+    private function parseDutyDoor(string $line)
+    {
+        $doorStr = mb_substr($line, 15, 2, 'UTF-8');
+        $door = [
+                '休门' => 0,
+                '死门' => 1,
+                '伤门' => 2,
+                '杜门' => 3,
+                '开门' => 4,
+                '惊门' => 5,
+                '生门' => 6,
+                '景门' => 7,
+            ][$doorStr] ?? null;
+        if ($door === null) {
+            throw new Exception("值使解析失败: {$doorStr}");
+        }
+
+        return ["text" => $doorStr, "value" => $door];
+    }
+
+    private function parseDutyStar(string $line)
+    {
+        $starStr = mb_substr($line, 7, 2, 'UTF-8');
+        $star = [
+                '天蓬' => 0,
+                '天芮' => 1,
+                '天冲' => 2,
+                '天辅' => 3,
+                '天禽' => 4,
+                '天心' => 5,
+                '天柱' => 6,
+                '天任' => 7,
+                '天英' => 8,
+            ][$starStr] ?? null;
+        if ($star === null) {
+            throw new Exception("值符解析失败: {$starStr}");
+        }
+
+        return ["text" => $starStr, "value" => $star];
     }
 
     private function trim(string $s): string
