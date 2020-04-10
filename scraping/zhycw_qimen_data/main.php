@@ -72,10 +72,14 @@ require __DIR__.'/vendor/autoload.php';
 
         // 节气 元 干支时 旬首
         $line = fgets($fp);
+        $leap = false;
+        if (mb_substr($line, 3, 1, 'UTF-8') === '闰') {
+            $leap = true;
+        }
         $solarTerm = $this->parseSolarTerm($line);
-        $yuan = $this->parseYuan($line);
-        $sexagenaryHour = $this->parseSexagenaryHour($line);
-        $leadingHour = $this->parseLeadingHour($line);
+        $yuan = $this->parseYuan($line, $leap);
+        $sexagenaryHour = $this->parseSexagenaryHour($line, $leap);
+        $leadingHour = $this->parseLeadingHour($line, $leap);
 
         // 信息
         $line = fgets($fp);
@@ -302,7 +306,7 @@ require __DIR__.'/vendor/autoload.php';
         return ["text" => $this->trim($starStr), "value" => $cs];
     }
 
-    private function parseSexagenaryHour(string $line): array
+    private function parseSexagenaryHour(string $line, bool $leap): array
     {
         $sMap = [
             "甲子" => 0,
@@ -366,7 +370,11 @@ require __DIR__.'/vendor/autoload.php';
             "壬戌" => 58,
             "癸亥" => 59,
         ];
-        $sHour = mb_substr($line, 10, 2, 'UTF-8');
+        if ($leap) {
+            $sHour = mb_substr($line, 13, 2, 'UTF-8');
+        } else {
+            $sHour = mb_substr($line, 10, 2, 'UTF-8');
+        }
 
         $cs = $sMap[$this->trim($sHour)] ?? null;
         if ($cs === null) {
@@ -376,7 +384,7 @@ require __DIR__.'/vendor/autoload.php';
         return ["text" => $this->trim($sHour), "value" => $cs];
     }
 
-    private function parseLeadingHour(string $line)
+    private function parseLeadingHour(string $line, bool $leap)
     {
         $hMap = [
             '戊' => 4,
@@ -386,7 +394,11 @@ require __DIR__.'/vendor/autoload.php';
             '壬' => 8,
             '癸' => 9,
         ];
-        $lHour = mb_substr($line, 16, 1, 'UTF-8');
+        if ($leap) {
+            $lHour = mb_substr($line, 19, 1, 'UTF-8');
+        } else {
+            $lHour = mb_substr($line, 16, 1, 'UTF-8');
+        }
 
         $cs = $hMap[$this->trim($lHour)] ?? null;
         if ($cs === null) {
@@ -396,11 +408,16 @@ require __DIR__.'/vendor/autoload.php';
         return ["text" => $this->trim($lHour), "value" => $cs];
     }
 
-    private function parseYuan(string $line): array
+    private function parseYuan(string $line, bool $leap): array
     {
         $map = ['上元' => 0, '中元' => 1, '下元' => 2];
 
-        $yuan = mb_substr($line, 3, 2, 'UTF-8');
+        if ($leap) {
+            $yuan = mb_substr($line, 6, 2, 'UTF-8');
+        } else {
+            $yuan = mb_substr($line, 3, 2, 'UTF-8');
+        }
+
         if (!in_array($yuan, ['上元', '中元', '下元'])) {
             throw new Exception("元解析失败: {$yuan}");
         }
