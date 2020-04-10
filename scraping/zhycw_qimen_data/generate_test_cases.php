@@ -16,7 +16,7 @@
     {
         $fps = [];
         foreach ($this->filepaths as $each) {
-            $fp = fopen($this->filepaths, 'r');
+            $fp = fopen($each, 'r');
             if (!$fp) {
                 throw new Exception("文件打不开: {$each}");
             }
