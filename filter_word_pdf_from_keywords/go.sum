@@ -1,0 +1,4 @@
+github.com/ledongthuc/pdf v0.0.0-20200323191019-23c5852adbd2 h1:H9HhyvygtvWnn1R8ymra4vdIUOvDDlaPlX6mjoJ9UTY=
+github.com/ledongthuc/pdf v0.0.0-20200323191019-23c5852adbd2/go.mod h1:imJHygn/1yfhB7XSJJKlFZKl/J+dCPAknuiaGOshXAs=
+github.com/nguyenthenguyen/docx v0.0.0-20201105043207-fda3c29a0605 h1:Lrybkkc+vkem5fV2yRzEkvjOjFdSDm9xAzYw9DeE/YA=
+github.com/nguyenthenguyen/docx v0.0.0-20201105043207-fda3c29a0605/go.mod h1:kM9t0GrSgsrP+L/j+3SAvRVuMSuwctmpMTYXEUAjQXk=
