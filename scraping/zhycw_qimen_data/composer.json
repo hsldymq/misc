@@ -3,7 +3,7 @@
         "imangazaliev/didom": "^1.15",
         "guzzlehttp/guzzle": "6.5.7",
         "embed/embed": "^4.0",
-        "guzzlehttp/psr7": "1.8.4",
+        "guzzlehttp/psr7": "1.9.1",
         "slim/psr7": "^1.0"
     }
 }
